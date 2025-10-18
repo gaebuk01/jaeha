@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // [추가] 2단계: 구글 시트 연동을 위한 코드
     // =================================================================
 
-    // !!! 중요: 2단계에서 복사한 본인의 Google Apps Script 웹 앱 URL로 변경하세요.
-    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxZjbhoN6di6nyJpBs-Hk7c4-kh_x0LGgUhnkdYGq-wsG2P1vdW790XuP-ZETtr6BYV/exec'; 
+    // !!! 중요: 본인의 Google Apps Script 웹 앱 URL로 변경하세요.
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxZjbhoN6di6nyJpBs-Hk7c4-kh_x0LGgUhnkdYGq-wsG2P1vdW790XuP-ZETtr6BYV/exec'; // 여기에 사용자 URL 입력
 
     const recordForm = document.getElementById('record-form');
     const recordsContainer = document.getElementById('records-container');
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await response.json();
 
             if(result.result !== "success") {
-                 throw new Error(result.message || '알 수 없는 오류가 발생했습니다.');
+               throw new Error(result.message || '알 수 없는 오류가 발생했습니다.');
             }
             
             alert('성공적으로 기록되었습니다!');
@@ -132,4 +132,42 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 초기 데이터 로드
     loadRecords();
+    
+    // 엑셀 내보내기 버튼 (기록된 데이터가 캐시에 있을 때 동작)
+    exportButton.addEventListener('click', () => {
+        if (recordsCache.length === 0) {
+            alert("내보낼 기록이 없습니다.");
+            return;
+        }
+
+        // CSV 형식으로 데이터 생성 (헤더 포함)
+        const headers = ["시간", "닉네임", "점수", "기분", "단어", "요약", "칭찬/격려", "도움된점"];
+        let csv = headers.join(',') + '\n';
+        
+        recordsCache.forEach(record => {
+            const row = [
+                `"${new Date(record.Timestamp).toLocaleString('ko-KR')}"`, // 시간 형식 지정
+                `"${record.Nickname}"`,
+                record.Score,
+                `"${record.Mood}"`,
+                `"${record.Word.replace(/"/g, '""')}"`, // 쌍따옴표 이스케이프 처리
+                `"${record.Summary.replace(/"/g, '""')}"`,
+                `"${record.Praise.replace(/"/g, '""')}"`,
+                `"${record.Helpful.replace(/"/g, '""')}"`
+            ];
+            csv += row.join(',') + '\n';
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute("href", url);
+        link.setAttribute("download", `나의_하루_리포트_${new Date().toLocaleDateString('ko-KR').replace(/\./g, '-')}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
 });
